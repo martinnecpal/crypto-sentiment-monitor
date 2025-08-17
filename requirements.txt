@@ -1,7 +1,2 @@
 requests==2.31.0
 textblob==0.17.1
-feedparser==6.0.10
-schedule==1.2.0
-nltk==3.8.1
-python-dateutil==2.8.2
-sqlite3
