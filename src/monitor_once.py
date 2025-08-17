@@ -1,6 +1,7 @@
 # src/monitor_once.py
 import json
 import logging
+import sqlite3
 from datetime import datetime
 from main import NewsMonitor, DatabaseManager
 import os
@@ -40,7 +41,7 @@ class GitHubActionsMonitor(NewsMonitor):
             }, f, indent=2)
         
         # Get recent articles
-        conn = self.db.conn = sqlite3.connect(self.db.db_path)
+        conn = sqlite3.connect(self.db.db_path)
         cursor = conn.cursor()
         
         cursor.execute('''

@@ -2,33 +2,42 @@ name: Crypto Sentiment Monitor
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '0 */6 * * *'  # Run every 6 hours
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-    
+        
     - name: Install dependencies
       run: |
+        pip install --upgrade pip
         pip install -r requirements.txt
-    
+        
     - name: Run sentiment analysis
       run: |
-        python src/monitor_once.py
-    
-    - name: Upload results
+        cd src
+        python monitor_once.py
+        
+    - name: Upload results as artifacts
       uses: actions/upload-artifact@v3
+      if: always()
       with:
-        name: sentiment-analysis-results
+        name: crypto-sentiment-results
         path: |
-          sentiment_summary_*.json
-          articles_*.json
-          sentiment_report_*.txt
-          crypto_sentiment.log
+          src/sentiment_summary_*.json
+          src/articles_*.json  
+          src/sentiment_report_*.txt
+          src/crypto_sentiment.log
+        retention-days: 30
