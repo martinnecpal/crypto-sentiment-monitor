@@ -48,6 +48,7 @@ Thumbs.db
 # Output files
 *.json
 *.txt
+!requirements.txt
 daily_report_*.txt
 sentiment_summary_*.json
 </gitignore>
