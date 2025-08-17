@@ -31,7 +31,7 @@ jobs:
         python monitor_once.py
         
     - name: Upload results as artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: crypto-sentiment-results
