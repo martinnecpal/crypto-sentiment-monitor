@@ -2,8 +2,8 @@ name: Crypto Sentiment Monitor
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
 
 jobs:
   monitor:
@@ -14,4 +14,21 @@ jobs:
     - uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-    - run: echo "Workflow is working!"
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run sentiment analysis
+      run: |
+        python src/monitor_once.py
+    
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: sentiment-analysis-results
+        path: |
+          sentiment_summary_*.json
+          articles_*.json
+          sentiment_report_*.txt
+          crypto_sentiment.log
