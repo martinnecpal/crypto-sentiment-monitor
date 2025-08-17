@@ -3,7 +3,8 @@ import json
 import logging
 import sqlite3
 from datetime import datetime
-from main import NewsMonitor, DatabaseManager
+from main import NewsMonitor
+from database import DatabaseManager
 import os
 
 # Configure logging for GitHub Actions
