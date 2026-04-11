@@ -32,34 +32,40 @@ class NewsMonitor:
             'avalanche', 'avax', 'uniswap', 'uni'
         ]
         
-    def fetch_crypto_news(self) -> List[Article]:
-        """Fetch news articles - simplified version using NewsAPI"""
-        articles = []
+    def fetch_crypto_news(self):
+        """Реальные новости из RSS-лент вместо примеров"""
         
-        # Sample articles for demo (replace with real API calls)
-        sample_articles = [
-            {
-                'title': 'Bitcoin Reaches New All-Time High Amid Institutional Adoption',
-                'content': 'Bitcoin continues to surge as more institutions embrace cryptocurrency. The positive market sentiment reflects growing confidence in digital assets.',
-                'url': 'https://example.com/bitcoin-ath',
-                'source': 'CryptoNews',
-                'publishedAt': datetime.now().isoformat()
-            },
-            {
-                'title': 'Ethereum Network Upgrade Causes Mixed Market Reactions',
-                'content': 'The latest Ethereum upgrade has received mixed reactions from investors. While some are optimistic, others express concerns about potential issues.',
-                'url': 'https://example.com/ethereum-upgrade',
-                'source': 'BlockchainDaily',
-                'publishedAt': datetime.now().isoformat()
-            },
-            {
-                'title': 'Regulatory Concerns Impact Cryptocurrency Market Sentiment',
-                'content': 'New regulatory announcements have caused uncertainty in the crypto market. Investors are showing bearish sentiment amid unclear regulations.',
-                'url': 'https://example.com/regulatory-concerns',
-                'source': 'FinanceToday',
-                'publishedAt': datetime.now().isoformat()
-            }
+        # Список источников, которые мы будем парсить
+        rss_feeds = [
+            'https://cointelegraph.com/rss',
+            'https://www.coindesk.com/arc/outboundfeeds/rss/',
+            'https://bitcoinmagazine.com/feed',
+            'https://cryptoslate.com/feed/',
+            'https://decrypt.co/feed'
         ]
+        
+        all_articles = []
+        
+        for feed_url in rss_feeds:
+            try:
+                # Парсим RSS-ленту
+                feed = feedparser.parse(feed_url)
+                
+                for entry in feed.entries[:10]:  # Берем последние 10 статей из каждого источника
+                    article = {
+                        'title': entry.get('title', ''),
+                        'summary': entry.get('summary', ''),
+                        'link': entry.get('link', ''),
+                        'published': entry.get('published', ''),
+                        'source': feed_url.split('/')[2]  # Извлекаем домен источника
+                    }
+                    all_articles.append(article)
+                    
+            except Exception as e:
+                print(f"Ошибка при парсинге {feed_url}: {e}")
+                continue
+        
+        return all_articles
         
         for article_data in sample_articles:
             try:
