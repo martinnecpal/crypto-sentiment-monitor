@@ -11,6 +11,12 @@ from config import Config
 from telegram_bot import TelegramBot
 from sentiment_analyzer import FinSentimentAnalyzer
 
+# Добавьте в начало main.py, после импорта Config
+print("=== DEBUG: Проверка переменных окружения ===")
+print(f"TELEGRAM_WORKER_URL: {os.getenv('TELEGRAM_WORKER_URL', 'NOT SET')}")
+print(f"TELEGRAM_BOT_TOKEN: {os.getenv('TELEGRAM_BOT_TOKEN', 'NOT SET')[:10] if os.getenv('TELEGRAM_BOT_TOKEN') else 'NOT SET'}...")
+print(f"TELEGRAM_CHAT_ID: {os.getenv('TELEGRAM_CHAT_ID', 'NOT SET')}")
+print("="*29)
 
 def get_bitcoin_price():
     """
