@@ -1,3 +1,10 @@
+# Секретные файлы
+.env
+secret.env
+.env.local
+*.secret.*
+
+
 # Python
 __pycache__/
 *.py[cod]
