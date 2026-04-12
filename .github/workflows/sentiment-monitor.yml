@@ -1,0 +1,35 @@
+name: Crypto Sentiment Monitor
+
+on:
+  # Запуск по расписанию 2 раза в день
+  schedule:
+    # UTC время: 04:00 и 19:00 (это 7:00 и 22:00 по Москве зимой)
+    - cron: '0 9 * * *'   # 4:00 UTC
+    - cron: '0 21 * * *'  # 19:00 UTC
+  # Возможность запуска вручную из интерфейса GitHub
+  workflow_dispatch:
+
+jobs:
+  sentiment-analysis:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run sentiment monitor
+        env:
+          TELEGRAM_WORKER_URL: ${{ secrets.TELEGRAM_WORKER_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python src/main.py

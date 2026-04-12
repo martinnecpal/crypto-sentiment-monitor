@@ -9,7 +9,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Загружаем .env файл
-env_path = BASE_DIR / '.env'
+env_path = BASE_DIR / 'secret.env'
 load_dotenv(dotenv_path=env_path)
 
 class Config:

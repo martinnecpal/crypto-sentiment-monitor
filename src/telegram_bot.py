@@ -83,7 +83,7 @@ class TelegramBot:
         now = datetime.now()
         message = f"<b>📊 CRYPTO SENTIMENT REPORT</b>\n"
         message += f"<i>{now.strftime('%Y-%m-%d %H:%M:%S')}</i>\n"
-        message += f"{'='*40}\n\n"
+        message += f"{'='*29}\n\n"
         
         # Секция цены BTC
         if btc_data:
@@ -125,9 +125,9 @@ class TelegramBot:
             message += "\n"
         
         # Итоговый сигнал
-        message += f"{'='*40}\n"
+        message += f"{'='*29}\n"
         message += f"🎯 <b>FINAL SIGNAL</b>\n"
-        message += f"{'='*40}\n"
+        message += f"{'='*29}\n"
         message += f"{combined_signal['message']}\n"
         
         if combined_signal.get('advice'):
