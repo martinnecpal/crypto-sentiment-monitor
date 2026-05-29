@@ -41,29 +41,16 @@ class GitHubActionsMonitor(NewsMonitor):
             }, f, indent=2)
         
         # Get recent articles
-        conn = self.db._connect()
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT title, source, sentiment_score, crypto_mentioned, published_date, url
-            FROM articles
-            WHERE DATE(published_date) = DATE('now')
-            ORDER BY published_date DESC
-            LIMIT 50
-        ''')
-        
         articles = []
-        for row in cursor.fetchall():
+        for row in self.db.get_todays_articles():
             articles.append({
                 'title': row[0],
                 'source': row[1],
                 'sentiment_score': row[2],
                 'crypto_mentioned': json.loads(row[3]) if row[3] else [],
-                'published_date': row[4],
+                'published_date': str(row[4]),
                 'url': row[5]
             })
-        
-        conn.close()
         
         # Save articles
         articles_file = f"articles_{timestamp}.json"

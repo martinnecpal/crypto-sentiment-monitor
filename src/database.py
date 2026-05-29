@@ -136,6 +136,29 @@ class DatabaseManager:
 
         return final_summary
 
+    def get_todays_articles(self, limit: int = 50) -> list:
+        conn = self._connect()
+        cursor = conn.cursor()
+        if self.use_postgres:
+            cursor.execute(f'''
+                SELECT title, source, sentiment_score, crypto_mentioned, published_date, url
+                FROM articles
+                WHERE published_date::date = CURRENT_DATE
+                ORDER BY published_date DESC
+                LIMIT {limit}
+            ''')
+        else:
+            cursor.execute(f'''
+                SELECT title, source, sentiment_score, crypto_mentioned, published_date, url
+                FROM articles
+                WHERE DATE(published_date) = DATE('now')
+                ORDER BY published_date DESC
+                LIMIT {limit}
+            ''')
+        rows = cursor.fetchall()
+        conn.close()
+        return rows
+
     def get_article_count(self) -> int:
         conn = self._connect()
         cursor = conn.cursor()
