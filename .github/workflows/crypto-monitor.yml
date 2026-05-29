@@ -5,19 +5,16 @@ on:
   schedule:
     - cron: '0 */6 * * *'  # Run every 6 hours automatically
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-      
+      uses: actions/checkout@v6
+
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.9'
         
@@ -34,7 +31,7 @@ jobs:
         python monitor_once.py
         
     - name: Upload results as artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: crypto-sentiment-results
