@@ -1,121 +1,126 @@
-# src/database.py
-import sqlite3
 import json
-from datetime import datetime, timedelta
-from typing import Dict, List
+import logging
+import os
 import statistics
 from collections import defaultdict
-import logging
+from datetime import datetime, timedelta
+from typing import Dict
+
+POSTGRES_URL = os.environ.get('POSTGRES_URL')
+
 
 class DatabaseManager:
-    """Database manager optimized for GitHub Actions"""
-    
     def __init__(self, db_path: str = "crypto_sentiment.db"):
         self.db_path = db_path
+        self.use_postgres = bool(POSTGRES_URL)
+        self.ph = "%s" if self.use_postgres else "?"
         self.init_database()
-    
+        logging.info(f"Database initialized ({'Postgres' if self.use_postgres else 'SQLite'})")
+
+    def _connect(self):
+        if self.use_postgres:
+            import psycopg2
+            return psycopg2.connect(POSTGRES_URL)
+        else:
+            import sqlite3
+            return sqlite3.connect(self.db_path)
+
     def init_database(self):
-        """Initialize the SQLite database with required tables"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS articles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                content TEXT,
-                url TEXT UNIQUE,
-                published_date DATETIME,
-                source TEXT,
-                sentiment_score REAL,
-                crypto_mentioned TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sentiment_summary (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                crypto_name TEXT,
-                date DATE,
-                avg_sentiment REAL,
-                article_count INTEGER,
-                positive_count INTEGER,
-                negative_count INTEGER,
-                neutral_count INTEGER,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Create indexes for better performance
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(published_date)
-        ''')
-        cursor.execute('''
-            CREATE INDEX IF NOT EXISTS idx_articles_crypto ON articles(crypto_mentioned)
-        ''')
-        
+
+        if self.use_postgres:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS articles (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    content TEXT,
+                    url TEXT UNIQUE,
+                    published_date TIMESTAMP,
+                    source TEXT,
+                    sentiment_score REAL,
+                    crypto_mentioned TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        else:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS articles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    content TEXT,
+                    url TEXT UNIQUE,
+                    published_date DATETIME,
+                    source TEXT,
+                    sentiment_score REAL,
+                    crypto_mentioned TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_articles_date ON articles(published_date)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_articles_crypto ON articles(crypto_mentioned)')
         conn.commit()
         conn.close()
-        logging.info("Database initialized successfully")
-    
+
     def insert_article(self, article):
-        """Insert a new article into the database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         cursor = conn.cursor()
-        
+        ph = self.ph
+
         try:
-            cursor.execute('''
-                INSERT INTO articles 
-                (title, content, url, published_date, source, sentiment_score, crypto_mentioned)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                article.title,
-                article.content,
-                article.url,
-                article.published_date,
-                article.source,
+            values = (
+                article.title, article.content, article.url,
+                article.published_date, article.source,
                 article.sentiment_score,
                 json.dumps(article.crypto_mentioned) if article.crypto_mentioned else None
-            ))
+            )
+            if self.use_postgres:
+                cursor.execute(f'''
+                    INSERT INTO articles
+                    (title, content, url, published_date, source, sentiment_score, crypto_mentioned)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                    ON CONFLICT (url) DO NOTHING
+                ''', values)
+            else:
+                cursor.execute(f'''
+                    INSERT OR IGNORE INTO articles
+                    (title, content, url, published_date, source, sentiment_score, crypto_mentioned)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                ''', values)
             conn.commit()
             logging.info(f"Inserted article: {article.title[:50]}...")
-        except sqlite3.IntegrityError:
-            logging.debug(f"Article already exists: {article.url}")
         except Exception as e:
             logging.error(f"Error inserting article: {e}")
         finally:
             conn.close()
-    
+
     def get_sentiment_summary(self, days: int = 7) -> Dict:
-        """Get sentiment summary for the last N days"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         cursor = conn.cursor()
-        
+        ph = self.ph
+
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        
-        cursor.execute('''
-            SELECT crypto_mentioned, sentiment_score, published_date
+
+        cursor.execute(f'''
+            SELECT crypto_mentioned, sentiment_score
             FROM articles
-            WHERE published_date >= ? AND published_date <= ?
+            WHERE published_date >= {ph} AND published_date <= {ph}
             AND crypto_mentioned IS NOT NULL
         ''', (start_date, end_date))
-        
+
         results = cursor.fetchall()
         conn.close()
-        
+
         summary = defaultdict(list)
-        for crypto_json, sentiment, date in results:
-            if crypto_json:
-                try:
-                    cryptos = json.loads(crypto_json)
-                    for crypto in cryptos:
-                        summary[crypto].append(sentiment)
-                except json.JSONDecodeError:
-                    continue
-        
-        # Calculate statistics
+        for crypto_json, sentiment in results:
+            try:
+                for crypto in json.loads(crypto_json):
+                    summary[crypto].append(sentiment)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
         final_summary = {}
         for crypto, sentiments in summary.items():
             if sentiments:
@@ -128,12 +133,11 @@ class DatabaseManager:
                     'max_sentiment': max(sentiments),
                     'min_sentiment': min(sentiments)
                 }
-        
+
         return final_summary
-    
+
     def get_article_count(self) -> int:
-        """Get total number of articles in database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._connect()
         cursor = conn.cursor()
         cursor.execute('SELECT COUNT(*) FROM articles')
         count = cursor.fetchone()[0]
