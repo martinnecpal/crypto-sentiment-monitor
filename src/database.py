@@ -20,7 +20,12 @@ class DatabaseManager:
     def _connect(self):
         if self.use_postgres:
             import psycopg2
-            return psycopg2.connect(POSTGRES_URL)
+            from urllib.parse import urlparse, urlencode, urlunparse, parse_qs
+            parsed = urlparse(POSTGRES_URL)
+            params = {k: v[0] for k, v in parse_qs(parsed.query).items()
+                      if k != 'channel_binding'}
+            url = urlunparse(parsed._replace(query=urlencode(params)))
+            return psycopg2.connect(url)
         else:
             import sqlite3
             return sqlite3.connect(self.db_path)
