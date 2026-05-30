@@ -3,9 +3,13 @@ import json
 import os
 from datetime import datetime
 from urllib.parse import urlparse, urlencode, urlunparse, parse_qs
-from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))
+# Load .env.local when running locally (not available in CI — POSTGRES_URL injected via env secret)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))
+except ImportError:
+    pass
 
 def get_connection():
     raw_url = os.environ["POSTGRES_URL"]
