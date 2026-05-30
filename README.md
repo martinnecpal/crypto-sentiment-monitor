@@ -1,245 +1,186 @@
 # Crypto Sentiment Monitor
 
-An automated cryptocurrency news sentiment analysis application that monitors crypto news and analyzes market sentiment using natural language processing. Runs completely free on GitHub Actions with no server maintenance required.
+Automated cryptocurrency news sentiment analysis that runs on GitHub Actions every 6 hours — no servers, no maintenance required.
 
-## 🚀 Features
+## Features
 
-- 🔄 **Automated News Monitoring**: Analyzes cryptocurrency news articles for sentiment
-- 📊 **Sentiment Analysis**: Uses TextBlob NLP to score sentiment from -1 (bearish) to +1 (bullish)
-- 🪙 **Multi-Crypto Support**: Tracks Bitcoin, Ethereum, Dogecoin, and 8+ major cryptocurrencies
-- 📈 **Trend Analysis**: Historical sentiment tracking and automated reporting
-- 🤖 **GitHub Actions**: Automated runs every 6 hours - completely serverless
-- 📁 **Downloadable Results**: JSON and text reports available as GitHub artifacts
-- 🆓 **100% Free**: No API keys, servers, or paid services required
+- **Sentiment Analysis** — TextBlob NLP scores each article from -1 (bearish) to +1 (bullish)
+- **Multi-Crypto Detection** — tracks 11 cryptocurrencies and their ticker aliases
+- **Dual Database Support** — SQLite by default; Vercel Postgres when `POSTGRES_URL` secret is set
+- **GitHub Actions** — fully automated, runs on schedule or on demand
+- **Downloadable Reports** — JSON and text artifacts kept for 30 days
 
-## 📊 Sentiment Scoring
+## Sentiment Thresholds
 
-- **🟢 Bullish** (>0.1): Positive market sentiment
-- **🔴 Bearish** (<-0.1): Negative market sentiment  
-- **🟡 Neutral** (-0.1 to 0.1): Mixed or neutral sentiment
+| Label | Score |
+|---|---|
+| Bullish | > 0.1 |
+| Neutral | -0.1 to 0.1 |
+| Bearish | < -0.1 |
 
-## 🪙 Supported Cryptocurrencies
+## Supported Cryptocurrencies
 
-- Bitcoin (BTC)
-- Ethereum (ETH) 
-- Dogecoin (DOGE)
-- Cardano (ADA)
-- Solana (SOL)
-- Polkadot (DOT)
-- Chainlink (LINK)
-- Litecoin (LTC)
-- Polygon (MATIC)
-- Avalanche (AVAX)
-- Uniswap (UNI)
+Bitcoin (BTC), Ethereum (ETH), Dogecoin (DOGE), Cardano (ADA), Solana (SOL), Polkadot (DOT), Chainlink (LINK), Litecoin (LTC), Polygon (MATIC), Avalanche (AVAX), Uniswap (UNI)
 
-## 🤖 How It Works
+Ticker aliases (e.g. `btc` → `bitcoin`) are normalized automatically.
 
-### Automated GitHub Actions Workflow
+## How It Works
 
-The application runs automatically every 6 hours:
-
-1. **Data Collection**: Fetches and analyzes cryptocurrency news articles
-2. **Sentiment Analysis**: Processes each article to determine sentiment score
-3. **Crypto Detection**: Identifies which cryptocurrencies are mentioned
-4. **Report Generation**: Creates comprehensive sentiment summaries
-5. **Artifact Upload**: Saves results as downloadable files
+Each run:
+1. Fetches news articles via `fetch_crypto_news()` in `src/main.py`
+2. Scores each article with TextBlob polarity
+3. Detects which cryptos are mentioned (word-boundary regex)
+4. Stores results in the database (duplicates skipped by unique URL constraint)
+5. Writes timestamped JSON/TXT output files and uploads them as artifacts
 
 ### Workflow Triggers
-- ⏰ **Scheduled**: Every 6 hours automatically
-- 🔄 **Manual**: Click "Run workflow" in GitHub Actions
-- 📝 **Push**: Triggers on commits to main branch
 
-## 📥 Getting Results
+- **Scheduled** — every 6 hours (`0 */6 * * *`)
+- **Manual** — Actions tab → Crypto Sentiment Monitor → Run workflow
 
-### Where to Find Your Reports
+## Current Data Source
 
-1. **Go to**: Your Repository → **Actions** tab
-2. **Click**: Latest "Crypto Sentiment Monitor" workflow run  
-3. **Scroll down**: To "Artifacts" section
-4. **Download**: `crypto-sentiment-results.zip`
+`fetch_crypto_news()` currently uses **hardcoded sample articles** for demonstration. Because URLs are unique, only the first run inserts data — subsequent runs are no-ops.
 
-### What You Get
+To get real accumulating data, replace the method body in `src/main.py` with a live source:
 
-**📁 crypto-sentiment-results.zip contains:**
+```python
+# NewsAPI
+resp = requests.get("https://newsapi.org/v2/everything", params={
+    "q": "cryptocurrency", "apiKey": os.environ["NEWS_API_KEY"]
+})
 
-1. **`sentiment_summary_YYYYMMDD_HHMMSS.json`**
-   ```json
-   {
-     "timestamp": "20250817_143000",
-     "summary": {
-       "bitcoin": {
-         "avg_sentiment": 0.25,
-         "article_count": 15,
-         "positive_count": 10,
-         "negative_count": 3,
-         "neutral_count": 2
-       }
-     },
-     "total_cryptos": 5
-   }
-   ```
+# CoinDesk RSS (no key required)
+import feedparser
+feed = feedparser.parse("https://www.coindesk.com/arc/outboundfeeds/rss/")
 
-2. **`articles_YYYYMMDD_HHMMSS.json`**
-   ```json
-   {
-     "articles": [
-       {
-         "title": "Bitcoin Reaches New High",
-         "sentiment_score": 0.8,
-         "crypto_mentioned": ["bitcoin"],
-         "source": "CryptoNews"
-       }
-     ]
-   }
-   ```
-
-3. **`sentiment_report_YYYYMMDD_HHMMSS.txt`**
-   ```
-   🟢 BITCOIN: Bullish (0.250)
-      📊 Articles: 15 | ✅ Positive: 10 | ❌ Negative: 3
-   
-   🔴 ETHEREUM: Bearish (-0.120)  
-      📊 Articles: 12 | ✅ Positive: 4 | ❌ Negative: 8
-   ```
-
-4. **`crypto_sentiment.log`** - Detailed execution logs
-
-### Live Results in GitHub Actions
-
-You can also see real-time results in the workflow logs:
-
-```
-🎯 CRYPTO SENTIMENT SUMMARY
-============================================================
-🟢 BITCOIN: Bullish (0.250)
-   📊 Articles: 15 | ✅ Positive: 10 | ❌ Negative: 3
-🔴 ETHEREUM: Bearish (-0.120)
-   📊 Articles: 12 | ✅ Positive: 4 | ❌ Negative: 8
-🟡 DOGECOIN: Neutral (0.050)
-   📊 Articles: 8 | ✅ Positive: 3 | ❌ Negative: 2
-============================================================
+# Reddit (no key required)
+resp = requests.get("https://www.reddit.com/r/CryptoCurrency/new.json",
+    headers={"User-Agent": "crypto-sentiment-monitor"})
 ```
 
-## 🛠️ Setup Instructions
+## Database
 
-### 1. Fork or Clone This Repository
+| Column | Type | Description |
+|---|---|---|
+| `id` | INTEGER / SERIAL | Auto-increment primary key |
+| `title` | TEXT | Article headline |
+| `content` | TEXT | Full article body |
+| `url` | TEXT UNIQUE | Deduplication key |
+| `published_date` | TIMESTAMP | Article publish time |
+| `source` | TEXT | Publisher name |
+| `sentiment_score` | REAL | TextBlob polarity (-1 to +1) |
+| `crypto_mentioned` | TEXT | JSON array e.g. `["bitcoin","ethereum"]` |
+| `created_at` | TIMESTAMP | Insert time |
+
+**SQLite** is used by default (local file `src/crypto_sentiment.db`).  
+**Vercel Postgres** is used automatically when the `POSTGRES_URL` repository secret is set.
+
+## Output Files
+
+Each run writes to `src/` (git-ignored) and uploads as `crypto-sentiment-results.zip`:
+
+**`sentiment_summary_YYYYMMDD_HHMMSS.json`**
+```json
+{
+  "timestamp": "20260529_140000",
+  "summary": {
+    "bitcoin": {
+      "avg_sentiment": 0.25,
+      "article_count": 15,
+      "positive_count": 10,
+      "negative_count": 3,
+      "neutral_count": 2,
+      "max_sentiment": 0.87,
+      "min_sentiment": -0.12
+    }
+  },
+  "total_cryptos": 3
+}
+```
+
+**`articles_YYYYMMDD_HHMMSS.json`**
+```json
+{
+  "articles": [
+    {
+      "title": "Bitcoin Reaches New High",
+      "source": "CryptoNews",
+      "sentiment_score": 0.8,
+      "crypto_mentioned": ["bitcoin"],
+      "published_date": "2026-05-29 14:00:00"
+    }
+  ],
+  "total_articles": 15
+}
+```
+
+**`sentiment_report_YYYYMMDD_HHMMSS.txt`** — human-readable summary  
+**`crypto_sentiment.log`** — full execution log
+
+## Project Structure
+
+```
+crypto-sentiment-monitor/
+├── .github/workflows/
+│   └── crypto-monitor.yml      # GitHub Actions workflow (checkout@v6, setup-python@v6, upload-artifact@v7)
+├── src/
+│   ├── main.py                 # NewsMonitor — fetches articles, scores sentiment, detects cryptos
+│   ├── monitor_once.py         # GitHubActionsMonitor — single-run entry point, saves JSON/TXT output
+│   ├── database.py             # DatabaseManager — SQLite / Vercel Postgres with automatic fallback
+│   └── __init__.py
+├── requirements.txt            # requests, textblob, psycopg2-binary
+└── README.md
+```
+
+## Setup
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/YOUR_USERNAME/crypto-sentiment-monitor.git
 cd crypto-sentiment-monitor
 ```
 
 ### 2. Enable GitHub Actions
-- Go to your repository → **Actions** tab
-- Click **"I understand my workflows, go ahead and enable them"**
+Go to your repository → **Actions** tab → enable workflows if prompted.
 
-### 3. Run Your First Analysis
-- Click **Actions** → **Crypto Sentiment Monitor**
-- Click **"Run workflow"** → **"Run workflow"**
-- Wait 2-3 minutes for completion
-- Download results from Artifacts section
+### 3. Run your first analysis
+Actions → **Crypto Sentiment Monitor** → **Run workflow**
 
-### 4. Automatic Runs
-The workflow will now run automatically every 6 hours!
+### 4. Download results
+Actions → latest run → scroll to **Artifacts** → download `crypto-sentiment-results.zip`
 
-## 🏗️ Project Structure
+### Optional: Vercel Postgres
+Add your `POSTGRES_URL` connection string as a repository secret (Settings → Secrets → Actions). The app detects it automatically and switches from SQLite to Postgres.
 
-```
-crypto-sentiment-monitor/
-├── .github/workflows/
-│   └── crypto-monitor.yml     # GitHub Actions workflow
-├── src/
-│   ├── __init__.py           # Package initializer
-│   ├── main.py               # Core NewsMonitor class
-│   ├── monitor_once.py       # Single-run script for GitHub Actions
-│   └── database.py           # SQLite database management
-├── requirements.txt          # Python dependencies
-└── README.md                 # This file
-```
+## Local Development
 
-## 🔧 Local Development (Optional)
-
-### Prerequisites
-- Python 3.9+
-- pip
-
-### Setup
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Run single analysis
-cd src
-python monitor_once.py
+cd src && python monitor_once.py
 ```
 
-## 📊 Use Cases
+Requires Python 3.9+. Uses SQLite locally (no secrets needed).
 
-- **💼 Investment Research**: Track sentiment trends before making crypto investments
-- **📈 Market Analysis**: Identify bearish/bullish sentiment shifts
-- **🔍 News Monitoring**: Stay updated on crypto market sentiment without manual tracking
-- **📊 Data Analysis**: Export JSON data for further analysis in Excel/Python
-- **🤖 Automation**: Set-and-forget sentiment monitoring
+## Customization
 
-## 🆓 Why This Solution?
-
-- **Zero Cost**: Runs entirely on GitHub's free tier
-- **No Maintenance**: No servers to maintain or update
-- **No API Keys**: No external services or rate limits
-- **Reliable**: GitHub's infrastructure ensures consistent execution
-- **Transparent**: All code is open source and auditable
-- **Scalable**: Easy to add more cryptocurrencies or news sources
-
-## 🔄 Customization
-
-### Add More Cryptocurrencies
-Edit `src/main.py` and add to the `crypto_keywords` list:
+**Add a cryptocurrency** — edit `crypto_keywords` in `src/main.py`:
 ```python
 self.crypto_keywords = [
-    'bitcoin', 'btc', 'ethereum', 'eth',
-    'your-new-crypto', 'ticker'  # Add here
+    'bitcoin', 'btc', ...,
+    'yourtoken', 'tkr'   # add ticker + full name
 ]
 ```
 
-### Change Run Frequency
-Edit `.github/workflows/crypto-monitor.yml`:
+**Change run frequency** — edit the cron in `.github/workflows/crypto-monitor.yml`:
 ```yaml
-schedule:
-  - cron: '0 */3 * * *'  # Every 3 hours instead of 6
+- cron: '0 */3 * * *'   # every 3 hours
 ```
 
-### Add Real News Sources
-Replace the sample articles in `fetch_crypto_news()` with real API calls to:
-- NewsAPI
-- CoinDesk RSS
-- CoinTelegraph RSS
-- Reddit API
+## Troubleshooting
 
-## 🤝 Contributing
+**Workflow not running** — check that GitHub Actions are enabled under Settings → Actions → General.
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Test locally: `python src/monitor_once.py`
-5. Submit a pull request
+**No new data after first run** — expected with the sample data source. Wire up a real API in `fetch_crypto_news()` to get fresh articles each run.
 
-## 📝 License
-
-MIT License - see LICENSE file for details.
-
-## 🆘 Troubleshooting
-
-### Workflow Not Running?
-- Check if GitHub Actions are enabled in your repository settings
-- Verify the workflow file is in `.github/workflows/` directory
-
-### No Artifacts Available?
-- Make sure the workflow completed successfully (green checkmark)
-- Artifacts are only kept for 30 days by default
-
-### Want More Frequent Updates?
-- Edit the cron schedule in the workflow file
-- Remember: more frequent runs = more GitHub Actions minutes used
-
----
-
-**📊 Start monitoring crypto sentiment automatically - no servers, no costs, just insights!**
+**Artifacts missing** — artifacts expire after 30 days. Run the workflow again to generate new ones.

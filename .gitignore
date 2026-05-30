@@ -124,3 +124,5 @@ jobs:
           echo "=== Sentiment Summary ==="
           cat sentiment_summary.json
         fi
+.vercel
+.env*
