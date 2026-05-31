@@ -18,12 +18,14 @@ def get_connection():
     url = urlunparse(parsed._replace(query=urlencode(params)))
     return psycopg2.connect(url)
 
-new_article = {
-    "title": "Bitcoin ETF Inflows Hit Record High",
+ts = datetime.now().strftime("%Y%m%d%H%M%S")
+
+test_article = {
+    "title": f"[DB TEST] Bitcoin ETF Inflows Hit Record High",
     "content": "Spot Bitcoin ETFs recorded their highest single-day inflows, signaling strong institutional demand.",
-    "url": "https://example.com/btc-etf-record-3",
+    "url": f"https://example.com/db-test-{ts}",
     "published_date": datetime.now(),
-    "source": "CryptoNews",
+    "source": "db_test",
     "sentiment_score": 0.85,
     "crypto_mentioned": json.dumps(["bitcoin"]),
 }
@@ -31,19 +33,21 @@ new_article = {
 conn = get_connection()
 cur = conn.cursor()
 
-cur.execute("""
-    INSERT INTO articles (title, content, url, published_date, source, sentiment_score, crypto_mentioned)
-    VALUES (%(title)s, %(content)s, %(url)s, %(published_date)s, %(source)s, %(sentiment_score)s, %(crypto_mentioned)s)
-    ON CONFLICT (url) DO NOTHING
-    RETURNING id
-""", new_article)
+try:
+    cur.execute("""
+        INSERT INTO articles (title, content, url, published_date, source, sentiment_score, crypto_mentioned)
+        VALUES (%(title)s, %(content)s, %(url)s, %(published_date)s, %(source)s, %(sentiment_score)s, %(crypto_mentioned)s)
+        RETURNING id
+    """, test_article)
+    new_id = cur.fetchone()[0]
+    conn.commit()
+    print(f"INSERT ok — id={new_id}")
 
-row = cur.fetchone()
-conn.commit()
-cur.close()
-conn.close()
+    #cur.execute("DELETE FROM articles WHERE id = %s", (new_id,))
+    #conn.commit()
+    #print(f"DELETE ok — id={new_id}")
 
-if row:
-    print(f"Inserted article with id={row[0]}")
-else:
-    print("Article already exists (url conflict), skipped.")
+    #print("Database connectivity test passed.")
+finally:
+    cur.close()
+    conn.close()
