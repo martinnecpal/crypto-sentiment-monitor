@@ -6,6 +6,12 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env.local'))
+except ImportError:
+    pass
+
 POSTGRES_URL = os.environ.get('POSTGRES_URL')
 
 
