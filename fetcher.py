@@ -1,3 +1,4 @@
+import csv
 import feedparser
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -75,6 +76,23 @@ def fetch_all(cutoff_hours: int = 6) -> list[dict]:
     return articles
 
 
+_CSV_FIELDS = ["source", "title", "link", "published_at", "fetched_at", "summary"]
+
+
+def save_to_csv(articles: list[dict], path: str = "articles_test.csv") -> None:
+    fetched_at = datetime.now(timezone.utc).isoformat()
+    rows = [{**a, "fetched_at": fetched_at} for a in articles]
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=_CSV_FIELDS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def load_from_csv(path: str = "articles_test.csv") -> list[dict]:
+    with open(path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
 if __name__ == "__main__":
     from store import store_articles
     articles = fetch_all()
@@ -83,6 +101,8 @@ if __name__ == "__main__":
     articles, removed = deduplicator.extract_titles(articles)
 
     articles = deduplicator.dedupe_titles_with_AI(articles)
+
+    #save_to_csv(articles=articles,path='test.csv')
 
     inserted = store_articles(articles)
     print(f"Inserted {inserted} new articles from {len(FEEDS)} feed(s).")

@@ -13,6 +13,21 @@ def get_client() -> Client:
 
 
 def store_articles(articles: list[dict]) -> int:
+    """
+    Upsert articles into the ``news_raw`` Supabase table.
+
+    Each dict in *articles* must contain at least a ``link`` key (used as the
+    conflict target for deduplication).  A ``fetched_at`` UTC timestamp is
+    added to every row before insertion; existing rows with the same ``link``
+    are silently ignored (``ignore_duplicates=True``).
+
+    Args:
+        articles: List of article dicts to store.
+
+    Returns:
+        Number of rows actually inserted (0 if *articles* is empty or all
+        rows were duplicates).
+    """
     if not articles:
         return 0
     client = get_client()
